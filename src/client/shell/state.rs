@@ -572,6 +572,8 @@ pub(super) struct ClientTabCloseConfirmation {
 pub(super) struct ClientConfirmCloseOverlay {
     pub(super) workspace_id: String,
     pub(super) tab_target: Option<ClientTabCloseConfirmation>,
+    pub(super) terminal_method:
+        Option<Box<(WorkspaceNavigationTarget, crate::api::schema::Method)>>,
     pub(super) title: String,
     pub(super) detail: String,
 }
