@@ -1,0 +1,87 @@
+name: Verify Linux command installation
+
+on:
+  push:
+    branches: [verify-linux-command-install]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  verify:
+    if: github.repository == 'JGKang92/herdr'
+    name: Installer (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-22.04
+          - arch: aarch64
+            runner: ubuntu-22.04-arm
+    env:
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - name: Checkout the installer
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+
+      - name: Download the verified Linux artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 36812252700 --repo "$GITHUB_REPOSITORY" \
+            --name "herdr-linux-$ARCH-close-confirmation" \
+            --dir "$RUNNER_TEMP/built-artifact"
+
+      - name: Check installation, backups, and running processes
+        run: |
+          set -euo pipefail
+          script="$GITHUB_WORKSPACE/scripts/install_close_confirmation.sh"
+          sh -n "$script"
+          if command -v shellcheck >/dev/null; then
+            shellcheck "$script"
+          fi
+          test_root=$(mktemp -d "$RUNNER_TEMP/installer-check.XXXXXX")
+          install_dir="$test_root/bin"
+          fixture="$test_root/files"
+          asset="herdr-linux-$ARCH"
+          mkdir -p "$install_dir" "$fixture"
+          cp "$RUNNER_TEMP/built-artifact/$asset" "$fixture/$asset"
+          cp "$RUNNER_TEMP/built-artifact/$asset.sha256" "$fixture/$asset.sha256"
+          cp /bin/sleep "$install_dir/herdr"
+          "$install_dir/herdr" 300 &
+          live_pid=$!
+          trap 'kill "$live_pid" 2>/dev/null || true' EXIT
+          old_hash=$(sha256sum "$install_dir/herdr" | awk '{print $1}')
+          old_inode=$(stat -Lc '%i' "$install_dir/herdr")
+          for attempt in $(seq 1 20); do
+            if [ "$(stat -Lc '%i' "/proc/$live_pid/exe")" = "$old_inode" ]; then
+              break
+            fi
+            sleep 0.05
+          done
+          test "$(stat -Lc '%i' "/proc/$live_pid/exe")" = "$old_inode"
+          HERDR_CLOSE_CONFIRMATION_DOWNLOAD_BASE_URL="file://$fixture" \
+            HERDR_CLOSE_CONFIRMATION_INSTALL_DIR="$install_dir" sh "$script"
+          kill -0 "$live_pid"
+          test "$(stat -Lc '%i' "/proc/$live_pid/exe")" = "$old_inode"
+          test "$(stat -Lc '%i' "$install_dir/herdr")" != "$old_inode"
+          expected=$(awk '{print $1}' "$fixture/$asset.sha256")
+          test "$(sha256sum "$install_dir/herdr" | awk '{print $1}')" = "$expected"
+          test "$("$install_dir/herdr" --version)" = 'herdr 0.9.1'
+          backup=$(find "$install_dir" -maxdepth 1 -name 'herdr.before-close-confirmation.*' -type f)
+          test "$(sha256sum "$backup" | awk '{print $1}')" = "$old_hash"
+          printf '%064d  %s\n' 0 "$asset" > "$fixture/$asset.sha256"
+          if HERDR_CLOSE_CONFIRMATION_DOWNLOAD_BASE_URL="file://$fixture" \
+            HERDR_CLOSE_CONFIRMATION_INSTALL_DIR="$install_dir" sh "$script"; then
+            echo 'A corrupt download was accepted' >&2
+            exit 1
+          fi
+          test "$(sha256sum "$install_dir/herdr" | awk '{print $1}')" = "$expected"
+          kill -0 "$live_pid"
+          echo 'PASS: verified binary installed, backup preserved, existing process survived, corrupt download rejected'
