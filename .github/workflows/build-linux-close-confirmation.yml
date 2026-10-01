@@ -1,0 +1,120 @@
+name: Linux close-confirmation binaries
+
+on:
+  push:
+    branches: [build-linux-close-confirmation]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  RUST_TOOLCHAIN_VERSION: 1.96.1
+  SOURCE_COMMIT: 3d2f5719614c5bed65a1c77ac49cd56754d9c92f
+  LIBGHOSTTY_VT_OPTIMIZE: ReleaseFast
+  LIBGHOSTTY_VT_SIMD: 'true'
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: gcc
+  CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: gcc
+
+jobs:
+  build:
+    if: github.repository == 'JGKang92/herdr'
+    name: Linux (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+            asset: herdr-linux-x86_64
+          - arch: aarch64
+            runner: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-musl
+            asset: herdr-linux-aarch64
+    env:
+      CARGO_BUILD_TARGET: ${{ matrix.target }}
+      ARTIFACT_NAME: ${{ matrix.asset }}
+      BUILD_TARGET: ${{ matrix.target }}
+    steps:
+      - name: Checkout the patched source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Verify the source matches the reviewed patch
+        run: |
+          test "$(git rev-parse HEAD^)" = "$SOURCE_COMMIT"
+          git diff --exit-code "$SOURCE_COMMIT" HEAD -- . ':(exclude).github/workflows/build-linux-close-confirmation.yml'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN_VERSION }}
+          targets: ${{ matrix.target }}
+
+      - name: Install Zig
+        uses: vercel-labs/setup-zig@83c1594f26b86da8a9a8ddd9b5ee5f3af0f96943 # v1.0.2
+        with:
+          version: 0.16.0
+
+      - name: Install build and test tools
+        uses: taiki-e/install-action@fd2f5e3d644b484055ebf4268f474c565f148f25 # v2.81.9
+        with:
+          tool: just,cargo-nextest
+
+      - name: Install native Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build musl-tools
+
+      - name: Build the release binary
+        run: just build
+
+      - name: Test the client on Linux
+        run: just test-one 'client::shell::tests'
+
+      - name: Verify and package the binary
+        run: |
+          set -euo pipefail
+          output_dir="$RUNNER_TEMP/linux-close-confirmation"
+          mkdir -p "$output_dir"
+          cp "target/$BUILD_TARGET/release/herdr" "$output_dir/$ARTIFACT_NAME"
+          chmod 755 "$output_dir/$ARTIFACT_NAME"
+          cd "$output_dir"
+          file "$ARTIFACT_NAME" | tee BUILD_INFO.txt
+          if readelf -l "$ARTIFACT_NAME" | grep -q 'INTERP'; then
+            echo 'The binary requires a dynamic interpreter' >&2
+            exit 1
+          fi
+          if readelf -d "$ARTIFACT_NAME" | grep -q '(NEEDED)'; then
+            echo 'The binary requires a shared library' >&2
+            exit 1
+          fi
+          if nm -u "$ARTIFACT_NAME" | grep -E '(__cxa|GLIBCXX|CXXABI|_ZSt)'; then
+            echo 'The binary has unresolved C++ runtime symbols' >&2
+            exit 1
+          fi
+          "./$ARTIFACT_NAME" --version | tee -a BUILD_INFO.txt
+          {
+            echo "source_commit=$SOURCE_COMMIT"
+            echo "workflow_commit=$GITHUB_SHA"
+            echo "target=$BUILD_TARGET"
+            echo "libghostty_vt_optimize=$LIBGHOSTTY_VT_OPTIMIZE"
+            echo "libghostty_vt_simd=$LIBGHOSTTY_VT_SIMD"
+          } >> BUILD_INFO.txt
+          sha256sum "$ARTIFACT_NAME" > "$ARTIFACT_NAME.sha256"
+          tar -czf "$ARTIFACT_NAME.tar.gz" "$ARTIFACT_NAME" "$ARTIFACT_NAME.sha256" BUILD_INFO.txt
+          sha256sum "$ARTIFACT_NAME.tar.gz" > "$ARTIFACT_NAME.tar.gz.sha256"
+
+      - name: Upload the Linux files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ${{ matrix.asset }}-close-confirmation
+          path: ${{ runner.temp }}/linux-close-confirmation/*
+          retention-days: 90
+          if-no-files-found: error
