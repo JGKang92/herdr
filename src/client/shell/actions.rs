@@ -298,6 +298,14 @@ impl ClientShellState {
         method: crate::api::schema::Method,
         outcome: &mut ClientShellInput,
     ) {
+        if self.config.confirm_close
+            && self.endpoint_is_online(&self.active_endpoint_id)
+            && self.supports_endpoint_method(&method)
+            && self.open_confirm_terminal_close_overlay(&method)
+        {
+            outcome.repaint = true;
+            return;
+        }
         self.push_endpoint_method_with_kind(method, PendingEndpointKind::Generic, outcome);
     }
 

@@ -844,9 +844,10 @@ fn workspace_actions_preserve_selected_target_and_client_confirmation() {
     assert!(matches!(
         state.overlay.as_ref(),
         Some(ClientShellOverlay::ConfirmClose(ClientConfirmCloseOverlay {
-            workspace_id,
+            method,
             ..
-        })) if workspace_id == "ws_2"
+        })) if matches!(method.as_ref(), crate::api::schema::Method::WorkspaceClose(params)
+            if params.workspace_id == "ws_2")
     ));
     let confirm = state.handle_input_bytes(b"\r");
     let [ClientShellAction::Endpoint { request, .. }] = &confirm.actions[..] else {

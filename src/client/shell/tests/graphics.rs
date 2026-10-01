@@ -215,7 +215,12 @@ fn every_dialog_and_menu_occludes_its_panel_not_the_whole_screen() {
             },
         }),
         ClientShellOverlay::ConfirmClose(ClientConfirmCloseOverlay {
-            workspace_id: "ws_1".into(),
+            method: Box::new(crate::api::schema::Method::WorkspaceClose(
+                crate::api::schema::WorkspaceCloseParams {
+                    workspace_id: "ws_1".into(),
+                    close_group: true,
+                },
+            )),
             title: "close".into(),
             detail: "confirm".into(),
         }),

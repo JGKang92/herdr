@@ -275,7 +275,7 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # Pane scrollback lines to scroll per mouse wheel notch.
 # mouse_scroll_lines = 3
 
-# Ask for confirmation before closing a workspace
+# Ask for confirmation before closing a pane, tab, or workspace in the TUI
 # confirm_close = true
 
 # Ask for a tab name before creating a new tab.

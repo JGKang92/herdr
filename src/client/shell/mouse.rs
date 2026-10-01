@@ -1659,20 +1659,7 @@ impl ClientShellState {
                 match self.overlay.as_ref() {
                     Some(ClientShellOverlay::Rename(_)) => self.save_rename_overlay(outcome),
                     Some(ClientShellOverlay::ConfirmClose(_)) => {
-                        let Some(ClientShellOverlay::ConfirmClose(confirm)) = self.overlay.take()
-                        else {
-                            return;
-                        };
-                        self.push_endpoint_method(
-                            crate::api::schema::Method::WorkspaceClose(
-                                crate::api::schema::WorkspaceCloseParams {
-                                    workspace_id: confirm.workspace_id,
-                                    close_group: true,
-                                },
-                            ),
-                            outcome,
-                        );
-                        outcome.repaint = true;
+                        self.confirm_close_overlay(outcome);
                     }
                     _ => {}
                 }

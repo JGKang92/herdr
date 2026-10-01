@@ -562,7 +562,7 @@ pub(super) struct ClientContextMenuItem {
 
 #[derive(Debug)]
 pub(super) struct ClientConfirmCloseOverlay {
-    pub(super) workspace_id: String,
+    pub(super) method: Box<crate::api::schema::Method>,
     pub(super) title: String,
     pub(super) detail: String,
 }
