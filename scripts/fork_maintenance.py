@@ -8,7 +8,6 @@ import re
 import shutil
 import subprocess
 import tarfile
-import urllib.request
 from pathlib import Path
 
 PLATFORMS = {
@@ -137,8 +136,11 @@ def prepare(repository, output):
         print(f"Already published: {plan['release_tag']}")
         write_outputs(plan)
         return
-    with urllib.request.urlopen("https://herdr.dev/latest.json", timeout=30) as response:
-        official = json.load(response)
+    # Match Herdr's updater transport; the website rejects Python's HTTP client.
+    official = json.loads(run(
+        "curl", "-fsSL", "--retry", "3", "--connect-timeout", "10", "--max-time", "30",
+        "https://herdr.dev/latest.json",
+    ))
     if official["version"] != plan["version"]:
         raise ValueError("Upstream release and update manifest disagree; retry next scheduled run")
     output.mkdir(parents=True, exist_ok=False)
