@@ -63,12 +63,15 @@ jobs:
           - platform: linux-x86_64
             runner: ubuntu-22.04
             target: x86_64-unknown-linux-musl
+            test_target: x86_64-unknown-linux-gnu
           - platform: linux-aarch64
             runner: ubuntu-22.04-arm
             target: aarch64-unknown-linux-musl
+            test_target: aarch64-unknown-linux-gnu
           - platform: windows-x86_64
             runner: windows-2022
             target: x86_64-pc-windows-msvc
+            test_target: x86_64-pc-windows-msvc
     env:
       CARGO_BUILD_TARGET: ${{ matrix.target }}
       CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: gcc
@@ -123,7 +126,14 @@ jobs:
           workspaces: source
           key: fork-${{ matrix.target }}
       - name: Lint and test
+        env:
+          CARGO_BUILD_TARGET: ${{ matrix.test_target }}
         run: just ci
+      - name: Test close confirmation and updater on the musl release target
+        if: runner.os == 'Linux'
+        run: |
+          just test-one 'client::shell::tests'
+          just test-one 'update::'
       - name: Check documentation contracts
         run: just docs-contract-test
       - name: Build optimized binary

@@ -17,7 +17,9 @@ branch. Patch conflicts stop the job. They require a reviewed patch refresh;
 the workflow never guesses how to resolve them.
 
 Windows x86_64, native Linux x86_64 and native Linux aarch64 must all pass lint,
-tests and packaging before publication. Linux installers are tested for backups,
+tests and packaging before publication. Linux lint and the complete test suite use
+the upstream native GNU target; the musl release target additionally runs the
+client-shell and updater suites. Linux installers are tested for backups,
 replacement of an executing file and corrupt-download rejection. Windows uses
 upstream's signed ConPTY package. The Linux x86_64 build also runs the upstream
 release performance smoke comparison. Every platform records its source commit
