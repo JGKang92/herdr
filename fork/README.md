@@ -37,7 +37,9 @@ an existing process alive. Ensure `~/.local/bin` precedes any other Herdr path.
 
 The Windows zip includes the executable and ConPTY dependencies. Use the upstream
 Windows installer with `-LocalPackagePath`, `-LocalPackageFormat zip`, the package
-SHA-256 and release tag as `-LocalPackageIdentity` when bootstrapping this build.
+SHA-256 and a distinct fork identity as `-LocalPackageIdentity` when bootstrapping
+this build. Fork updates use `fork-<version>-<checksum-prefix>` install directories
+so an existing official release of the same version is never reused.
 
 Fork binaries are compiled with `HERDR_FORK_UPDATE_MANIFEST_URL` pointing to this
 fork's latest `manifest.json`. Thereafter `herdr update` installs the next verified

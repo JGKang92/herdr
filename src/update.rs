@@ -754,6 +754,16 @@ fn download_windows_update(release: &ReleaseInfo) -> Result<DownloadedWindowsUpd
 }
 
 #[cfg(windows)]
+fn windows_package_identity(version: &str, checksum: &str) -> String {
+    if FORK_UPDATE_MANIFEST_URL.is_some() {
+        let revision: String = checksum.chars().take(12).collect();
+        format!("fork-{version}-{revision}")
+    } else {
+        version.to_owned()
+    }
+}
+
+#[cfg(windows)]
 fn install_windows_update_with_installer(
     release: &ReleaseInfo,
     update: &DownloadedWindowsUpdate,
@@ -762,6 +772,7 @@ fn install_windows_update_with_installer(
         .sha256
         .as_deref()
         .ok_or("Windows update asset is missing a SHA-256 checksum")?;
+    let package_identity = windows_package_identity(release.label(), expected_sha256);
     let mut command = Command::new("powershell");
     command
         .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"])
@@ -772,7 +783,7 @@ fn install_windows_update_with_installer(
             "-LocalPackageFormat",
             &release.package_format,
             "-LocalPackageIdentity",
-            release.label(),
+            &package_identity,
             "-LocalPackageSha256",
             expected_sha256,
         ])
@@ -2511,6 +2522,18 @@ fn platform_target() -> (&'static str, &'static str) {
 
 #[cfg(test)]
 mod fork_update_tests {
+    #[cfg(windows)]
+    #[test]
+    fn fork_packages_do_not_reuse_an_existing_official_windows_install() {
+        let checksum = "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890";
+        let identity = super::windows_package_identity("0.9.3", checksum);
+        if option_env!("HERDR_FORK_UPDATE_MANIFEST_URL").is_some() {
+            assert_eq!(identity, "fork-0.9.3-abcdef123456");
+        } else {
+            assert_eq!(identity, "0.9.3");
+        }
+    }
+
     #[test]
     fn fork_builds_keep_updates_in_the_verified_fork() {
         if let Some(url) = option_env!("HERDR_FORK_UPDATE_MANIFEST_URL") {
