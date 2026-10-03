@@ -113,8 +113,8 @@ fn last_tab_close_confirmation_can_be_cancelled() {
 }
 
 #[test]
-fn tab_close_stays_immediate_with_confirmation_disabled_or_other_tabs() {
-    for (confirm, tabs) in [(false, 1), (false, 2), (true, 2)] {
+fn tab_close_stays_immediate_with_confirmation_disabled() {
+    for (confirm, tabs) in [(false, 1), (false, 2)] {
         for menu in [false, true] {
             let mut state = close_state(confirm, tabs);
             assert_tab_close(&request_close(&mut state, menu));
@@ -216,6 +216,8 @@ fn last_tab_close_preserves_parent_group_and_linked_workspace_scope() {
             ));
             assert_tab_close(&state.handle_input_bytes(b"\r"));
         } else {
+            assert_no_close(&close);
+            let close = state.handle_input_bytes(b"\r");
             assert_tab_close(&close);
             assert!(state.overlay.is_none());
             let [ClientShellAction::Endpoint { request, .. }] = close.actions.as_slice() else {

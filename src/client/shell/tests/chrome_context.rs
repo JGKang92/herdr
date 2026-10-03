@@ -483,6 +483,8 @@ fn close_confirmation_error_becomes_client_owned_overlay_and_stable_group_close(
         crate::input::KeybindMatch::Action(crate::input::KeybindAction::ClosePane),
         &mut close,
     );
+    assert!(close.actions.is_empty());
+    let close = state.handle_input_bytes(b"\r");
     let [ClientShellAction::Endpoint { request, .. }] = &close.actions[..] else {
         panic!("pane close should use endpoint API");
     };

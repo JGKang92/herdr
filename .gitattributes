@@ -1,2 +1,4 @@
 * text=auto eol=lf
 packaging/windows/licenses/* binary
+# Unified diff context lines contain a mandatory leading space, including empty lines.
+fork/*.patch whitespace=-blank-at-eol

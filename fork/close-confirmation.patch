@@ -1,0 +1,558 @@
+diff --git a/docs/next/website/src/content/docs/cli-reference.mdx b/docs/next/website/src/content/docs/cli-reference.mdx
+index 31fe26a..cc82636 100644
+--- a/docs/next/website/src/content/docs/cli-reference.mdx
++++ b/docs/next/website/src/content/docs/cli-reference.mdx
+@@ -198,7 +198,7 @@ herdr tab close <tab_id>
+ 
+ A tab is another terminal layout inside a workspace. Without `--workspace`, `tab create` uses the active workspace and fails if none exists. Its JSON response exposes `.result.tab.tab_id` and `.result.root_pane.pane_id`. Closing a workspace's last tab also closes the workspace, matching the TUI close-tab action. If `confirm_close` is enabled and closing the tab would also close a whole worktree group, `tab close` returns a `confirmation_required` error instead.
+ 
+-With `ui.confirm_close` enabled, the TUI asks for confirmation before closing a workspace's last tab from a keybinding or the tab menu. Ordinary CLI/API tab closes remain immediate.
++With `ui.confirm_close` enabled, the TUI asks for confirmation before closing any pane or tab from a keybinding or context menu. Closing a workspace's last tab retains the workspace confirmation. Ordinary CLI/API pane and tab closes remain immediate.
+ 
+ Workspace and tab creation, and pane splitting, leave focus unchanged by default. `--focus` selects the new layout; `--no-focus` states the default explicitly. Without `--cwd`, new terminals follow the configured `terminal.new_cwd` policy, which follows the source pane or workspace by default. Each `--env KEY=VALUE` adds or replaces that variable in the new root shell.
+ 
+diff --git a/docs/next/website/src/content/docs/ja/cli-reference.mdx b/docs/next/website/src/content/docs/ja/cli-reference.mdx
+index 446f137..fcd08ab 100644
+--- a/docs/next/website/src/content/docs/ja/cli-reference.mdx
++++ b/docs/next/website/src/content/docs/ja/cli-reference.mdx
+@@ -194,7 +194,7 @@ herdr tab close <tab_id>
+ 
+ タブはワークスペース内の別のターミナルレイアウトです。`--workspace` を省略すると、`tab create` はアクティブなワークスペースを使い、存在しなければ失敗します。JSON レスポンスの `.result.tab.tab_id` と `.result.root_pane.pane_id` から ID を取得できます。ワークスペースの最後のタブを閉じると、そのワークスペースも閉じられます。`ui.confirm_close` が有効で、親ワークツリーの最後のタブを閉じるとワークツリーグループ全体が閉じられる場合、`tab close` は `confirmation_required` エラーを返します。
+ 
+-`ui.confirm_close` が有効な場合、キーバインドやタブメニューからワークスペースの最後のタブを閉じる前に、TUI が確認を求めます。通常の CLI/API によるタブの終了は引き続き即座に実行されます。
++`ui.confirm_close` が有効な場合、キーバインドやコンテキストメニューからペインやタブを閉じる前に、TUI が確認を求めます。ワークスペースの最後のタブではワークスペースの確認を維持します。通常の CLI/API によるペインやタブの終了は引き続き即座に実行されます。
+ 
+ ワークスペースとタブの作成、およびペインの分割は、デフォルトではフォーカスを変えません。`--focus` は新しいレイアウトを選択し、`--no-focus` はデフォルトを明示します。`--cwd` がない場合、新しいターミナルは `terminal.new_cwd` の設定に従い、デフォルトでは元のペインまたはワークスペースを引き継ぎます。各 `--env KEY=VALUE` は新しいルートシェルの環境変数を追加または置換します。
+ 
+diff --git a/docs/next/website/src/content/docs/zh-cn/cli-reference.mdx b/docs/next/website/src/content/docs/zh-cn/cli-reference.mdx
+index c71c78c..3797026 100644
+--- a/docs/next/website/src/content/docs/zh-cn/cli-reference.mdx
++++ b/docs/next/website/src/content/docs/zh-cn/cli-reference.mdx
+@@ -194,7 +194,7 @@ herdr tab close <tab_id>
+ 
+ 标签页是工作区内的另一个终端布局。不指定 `--workspace` 时,`tab create` 使用活动工作区;如果没有活动工作区则失败。JSON 响应中的 `.result.tab.tab_id` 和 `.result.root_pane.pane_id` 是对应 ID。关闭工作区的最后一个标签页也会关闭该工作区。启用 `ui.confirm_close` 时，如果关闭父工作树的最后一个标签页会连带关闭整个工作树组，`tab close` 会返回 `confirmation_required` 错误。
+ 
+-启用 `ui.confirm_close` 时，通过快捷键或标签页菜单关闭工作区的最后一个标签页前，TUI 会要求确认。普通的 CLI/API 标签页关闭操作仍立即执行。
++启用 `ui.confirm_close` 时，通过快捷键或上下文菜单关闭任何窗格或标签页前，TUI 会要求确认。关闭工作区的最后一个标签页时，保留工作区确认。普通的 CLI/API 窗格和标签页关闭操作仍立即执行。
+ 
+ 创建工作区、标签页和拆分窗格默认不改变焦点。`--focus` 选择新布局;`--no-focus` 显式表达默认行为。不指定 `--cwd` 时,新终端遵循 `terminal.new_cwd` 设置,默认跟随来源窗格或工作区。每个 `--env KEY=VALUE` 在新的根 shell 中添加或替换一个环境变量。
+ 
+diff --git a/docs/next/website/src/data/config-reference.json b/docs/next/website/src/data/config-reference.json
+index eb7e08d..3e7eef1 100644
+--- a/docs/next/website/src/data/config-reference.json
++++ b/docs/next/website/src/data/config-reference.json
+@@ -944,7 +944,7 @@
+           "key": "ui.confirm_close",
+           "type": "boolean",
+           "default": "true",
+-          "description": "Ask for confirmation before closing a workspace."
++          "description": "Ask for confirmation before closing a pane, tab, or workspace."
+         },
+         {
+           "key": "ui.prompt_new_tab_name",
+diff --git a/src/client/shell/actions.rs b/src/client/shell/actions.rs
+index 9d0a3bd..44c4a80 100644
+--- a/src/client/shell/actions.rs
++++ b/src/client/shell/actions.rs
+@@ -309,6 +309,14 @@ impl ClientShellState {
+         method: crate::api::schema::Method,
+         outcome: &mut ClientShellInput,
+     ) {
++        if self.config.confirm_close
++            && self.endpoint_is_online(&self.active_endpoint_id)
++            && self.supports_endpoint_method(&method)
++            && self.open_confirm_terminal_close_overlay(&method)
++        {
++            outcome.repaint = true;
++            return;
++        }
+         self.push_endpoint_method_with_kind(method, PendingEndpointKind::Generic, outcome);
+     }
+ 
+diff --git a/src/client/shell/overlay_input.rs b/src/client/shell/overlay_input.rs
+index 10bd4a4..d84a9f3 100644
+--- a/src/client/shell/overlay_input.rs
++++ b/src/client/shell/overlay_input.rs
+@@ -879,10 +879,15 @@ impl ClientShellState {
+             if key.code == KeyCode::Enter {
+                 self.accept_close_confirmation(outcome);
+             } else if key.code == KeyCode::Esc {
++                let terminal_close = matches!(self.overlay.as_ref(),
++                    Some(ClientShellOverlay::ConfirmClose(confirm))
++                        if confirm.terminal_method.is_some());
+                 self.overlay = None;
+-                self.mode = ClientShellMode::Navigate;
+-                self.navigate_workspace_id = self.focused_navigation_target();
+-                self.reveal_navigation_workspace = true;
++                if !terminal_close {
++                    self.mode = ClientShellMode::Navigate;
++                    self.navigate_workspace_id = self.focused_navigation_target();
++                    self.reveal_navigation_workspace = true;
++                }
+                 outcome.repaint = true;
+             }
+             return;
+@@ -1014,6 +1019,35 @@ impl ClientShellState {
+             return;
+         };
+         outcome.repaint = true;
++        if let Some(target) = confirm.terminal_method {
++            let (workspace, method) = *target;
++            let target_valid = self
++                .snapshot
++                .as_deref()
++                .is_some_and(|snapshot| match &method {
++                    crate::api::schema::Method::PaneClose(target) => {
++                        snapshot.panes.iter().any(|pane| {
++                            pane.pane_id == target.pane_id
++                                && pane.workspace_id == confirm.workspace_id
++                        })
++                    }
++                    crate::api::schema::Method::TabClose(target) => {
++                        snapshot.tabs.iter().any(|tab| {
++                            tab.tab_id == target.tab_id && tab.workspace_id == confirm.workspace_id
++                        })
++                    }
++                    _ => false,
++                });
++            if workspace.endpoint_id != self.active_endpoint_id
++                || !self.navigation_target_valid(&workspace)
++                || !target_valid
++            {
++                self.receive_endpoint_unavailable("Close target changed; try closing again".into());
++                return;
++            }
++            self.push_endpoint_method_with_kind(method, PendingEndpointKind::Generic, outcome);
++            return;
++        }
+         let method = if let Some(target) = confirm.tab_target {
+             if target.workspace.endpoint_id != self.active_endpoint_id
+                 || !self.navigation_target_valid(&target.workspace)
+@@ -1038,7 +1072,68 @@ impl ClientShellState {
+                 close_group: true,
+             })
+         };
+-        self.push_endpoint_method(method, outcome);
++        self.push_endpoint_method_with_kind(method, PendingEndpointKind::Generic, outcome);
++    }
++
++    pub(super) fn open_confirm_terminal_close_overlay(
++        &mut self,
++        method: &crate::api::schema::Method,
++    ) -> bool {
++        let Some(snapshot) = self.snapshot.as_deref() else {
++            return false;
++        };
++        let (workspace_id, title, detail) = match method {
++            crate::api::schema::Method::PaneClose(target) => {
++                let Some(pane) = snapshot
++                    .panes
++                    .iter()
++                    .find(|pane| pane.pane_id == target.pane_id)
++                else {
++                    return false;
++                };
++                let label = pane.label.as_deref().unwrap_or(&pane.pane_id);
++                (
++                    pane.workspace_id.clone(),
++                    "Close pane?",
++                    format!("Running processes will stop: {label}"),
++                )
++            }
++            crate::api::schema::Method::TabClose(target) => {
++                let Some(tab) = snapshot.tabs.iter().find(|tab| tab.tab_id == target.tab_id) else {
++                    return false;
++                };
++                let count = snapshot
++                    .panes
++                    .iter()
++                    .filter(|pane| pane.tab_id == tab.tab_id)
++                    .count();
++                let panes = if count == 1 {
++                    "1 pane".to_owned()
++                } else {
++                    format!("{count} panes")
++                };
++                (
++                    tab.workspace_id.clone(),
++                    "Close tab?",
++                    format!("Running processes in {panes} will stop: {}", tab.label),
++                )
++            }
++            _ => return false,
++        };
++        let Some(workspace) = self.navigation_target(&self.active_endpoint_id, &workspace_id)
++        else {
++            return false;
++        };
++        self.overlay = Some(ClientShellOverlay::ConfirmClose(
++            ClientConfirmCloseOverlay {
++                workspace_id,
++                tab_target: None,
++                terminal_method: Some(Box::new((workspace, method.clone()))),
++                title: title.into(),
++                detail,
++            },
++        ));
++        true
+     }
+ 
+     pub(super) fn open_confirm_close_overlay(&mut self, workspace_id: String) {
+@@ -1113,6 +1208,7 @@ impl ClientShellState {
+             ClientConfirmCloseOverlay {
+                 workspace_id,
+                 tab_target,
++                terminal_method: None,
+                 title: if closes_group {
+                     "Close worktree group?".to_owned()
+                 } else {
+diff --git a/src/client/shell/state.rs b/src/client/shell/state.rs
+index c170c9b..45ebe6f 100644
+--- a/src/client/shell/state.rs
++++ b/src/client/shell/state.rs
+@@ -572,6 +572,8 @@ pub(super) struct ClientTabCloseConfirmation {
+ pub(super) struct ClientConfirmCloseOverlay {
+     pub(super) workspace_id: String,
+     pub(super) tab_target: Option<ClientTabCloseConfirmation>,
++    pub(super) terminal_method:
++        Option<Box<(WorkspaceNavigationTarget, crate::api::schema::Method)>>,
+     pub(super) title: String,
+     pub(super) detail: String,
+ }
+diff --git a/src/client/shell/tests/chrome_context.rs b/src/client/shell/tests/chrome_context.rs
+index ed21bc8..bd9f3a1 100644
+--- a/src/client/shell/tests/chrome_context.rs
++++ b/src/client/shell/tests/chrome_context.rs
+@@ -483,6 +483,8 @@ fn close_confirmation_error_becomes_client_owned_overlay_and_stable_group_close(
+         crate::input::KeybindMatch::Action(crate::input::KeybindAction::ClosePane),
+         &mut close,
+     );
++    assert!(close.actions.is_empty());
++    let close = state.handle_input_bytes(b"\r");
+     let [ClientShellAction::Endpoint { request, .. }] = &close.actions[..] else {
+         panic!("pane close should use endpoint API");
+     };
+diff --git a/src/client/shell/tests/close_confirmation.rs b/src/client/shell/tests/close_confirmation.rs
+new file mode 100644
+index 0000000..9afb060
+--- /dev/null
++++ b/src/client/shell/tests/close_confirmation.rs
+@@ -0,0 +1,184 @@
++use super::*;
++use crate::api::schema::{Method, PaneTarget, TabTarget};
++
++fn close_cases() -> [(&'static [u8], &'static str, Method); 2] {
++    [
++        (
++            b"\x02x",
++            "Close pane?",
++            Method::PaneClose(PaneTarget {
++                pane_id: "pane_1".into(),
++            }),
++        ),
++        (
++            b"\x02X",
++            "Close tab?",
++            Method::TabClose(TabTarget {
++                tab_id: "tab_1".into(),
++            }),
++        ),
++    ]
++}
++
++fn ready_state() -> ClientShellState {
++    let mut state = ClientShellState::new(ClientShellConfig::from_config(&Config::default()));
++    let mut snapshot = snapshot();
++    let mut keep_tab = snapshot.tabs[0].clone();
++    keep_tab.tab_id = "tab_keep".into();
++    keep_tab.focused = false;
++    let mut keep_pane = snapshot.panes[0].clone();
++    keep_pane.pane_id = "pane_keep".into();
++    keep_pane.tab_id = "tab_keep".into();
++    keep_pane.focused = false;
++    snapshot.tabs.push(keep_tab);
++    snapshot.panes.push(keep_pane);
++    state.set_snapshot(Box::new(snapshot));
++    state.set_pane_surface(surface());
++    state
++}
++
++fn click(state: &mut ClientShellState, rect: Rect, button: MouseButton) -> ClientShellInput {
++    state.handle_raw_events(vec![RawInputEvent::Mouse(MouseEvent {
++        kind: MouseEventKind::Down(button),
++        column: rect.x + 1,
++        row: rect.y,
++        modifiers: KeyModifiers::empty(),
++    })])
++}
++
++fn assert_close_request(outcome: &ClientShellInput, expected: &Method) {
++    let [ClientShellAction::Endpoint { request, .. }] = &outcome.actions[..] else {
++        panic!("confirmation should submit exactly one endpoint request");
++    };
++    assert_eq!(&request.method, expected);
++}
++
++#[test]
++fn close_confirmation_keyboard_cancels_and_keeps_the_captured_target() {
++    for (keys, title, expected) in close_cases() {
++        let mut state = ready_state();
++        let close = state.handle_input_bytes(keys);
++        assert!(close.actions.is_empty());
++        assert!(close.repaint);
++        let frame = state.compose(106, 20).expect("close confirmation");
++        let text = frame_rows(&frame).join("\n");
++        assert!(text.contains(title));
++        assert!(text.contains("Running processes"));
++
++        let cancel = state.handle_input_bytes(b"\x1b");
++        assert!(cancel.actions.is_empty());
++        assert!(state.overlay.is_none());
++        assert_eq!(state.mode, ClientShellMode::Terminal);
++
++        assert!(state.handle_input_bytes(keys).actions.is_empty());
++        let mut update = state.snapshot.as_deref().expect("snapshot").clone();
++        let mut other_tab = update.tabs[0].clone();
++        other_tab.tab_id = "tab_2".into();
++        let mut other_pane = update.panes[0].clone();
++        other_pane.pane_id = "pane_2".into();
++        other_pane.tab_id = "tab_2".into();
++        update.tabs.push(other_tab);
++        update.panes.push(other_pane);
++        update.focused_tab_id = Some("tab_2".into());
++        update.focused_pane_id = Some("pane_2".into());
++        update.workspaces[0].active_tab_id = "tab_2".into();
++        for tab in &mut update.tabs {
++            tab.focused = tab.tab_id == "tab_2";
++        }
++        for pane in &mut update.panes {
++            pane.focused = pane.pane_id == "pane_2";
++        }
++        state.set_snapshot(Box::new(update));
++
++        assert_close_request(&state.handle_input_bytes(b"\r"), &expected);
++        assert!(state.overlay.is_none());
++    }
++}
++
++#[test]
++fn close_confirmation_mouse_context_menu_requires_confirmation() {
++    for (_, title, expected) in close_cases() {
++        let mut state = ready_state();
++        state.compose(106, 20).expect("shell frame");
++        let (target, action) = match &expected {
++            Method::PaneClose(_) => (state.hits.panes[0].rect, ClientContextMenuAction::ClosePane),
++            Method::TabClose(_) => (state.hits.tabs[0].0, ClientContextMenuAction::Close),
++            _ => unreachable!(),
++        };
++        click(&mut state, target, MouseButton::Right);
++        state.compose(106, 20).expect("context menu");
++        let index = match state.overlay.as_ref() {
++            Some(ClientShellOverlay::ContextMenu(menu)) => menu
++                .items()
++                .iter()
++                .position(|item| item.action == action)
++                .expect("close menu item"),
++            _ => panic!("context menu should open"),
++        };
++        let close_item = state.hits.context_menu_rows[index].0;
++        let close = click(&mut state, close_item, MouseButton::Left);
++        assert!(
++            close.actions.iter().all(|action| matches!(
++                action,
++                ClientShellAction::Endpoint { request, .. }
++                    if matches!(request.method, Method::TabFocus(_))
++            )),
++            "{title}: {:?}",
++            close.actions
++        );
++        let frame = state.compose(106, 20).expect("close confirmation");
++        assert!(frame_rows(&frame).join("\n").contains(title));
++
++        let confirm = state.hits.overlay_primary;
++        assert_close_request(&click(&mut state, confirm, MouseButton::Left), &expected);
++        assert!(state.overlay.is_none());
++    }
++}
++
++#[test]
++fn close_confirmation_mouse_cancel_preserves_the_terminal() {
++    for (keys, _, _) in close_cases() {
++        let mut state = ready_state();
++        assert!(state.handle_input_bytes(keys).actions.is_empty());
++        state.compose(106, 20).expect("close confirmation");
++        let cancel = state.hits.overlay_cancel;
++        assert!(click(&mut state, cancel, MouseButton::Left)
++            .actions
++            .is_empty());
++        assert!(state.overlay.is_none());
++        assert_eq!(state.mode, ClientShellMode::Terminal);
++        assert_eq!(state.snapshot.as_deref().expect("snapshot").panes.len(), 2);
++    }
++}
++
++#[test]
++fn close_confirmation_can_be_disabled_for_panes_and_tabs() {
++    for (keys, _, expected) in close_cases() {
++        let mut state = ready_state();
++        state.config.confirm_close = false;
++        assert_close_request(&state.handle_input_bytes(keys), &expected);
++        assert!(state.overlay.is_none());
++    }
++}
++
++#[test]
++fn close_confirmation_rejects_reused_ids_after_a_server_restart() {
++    for (keys, _, _) in close_cases() {
++        let mut state = ready_state();
++        assert!(state.handle_input_bytes(keys).actions.is_empty());
++        let mut restarted = state.snapshot.as_deref().unwrap().clone();
++        restarted.boot_id.push_str("-restarted");
++        state.set_snapshot(Box::new(restarted));
++        assert!(state.handle_input_bytes(b"\r").actions.is_empty());
++    }
++}
++
++#[test]
++fn close_confirmation_rejects_targets_from_an_old_connection() {
++    for (keys, _, _) in close_cases() {
++        let mut state = ready_state();
++        assert!(state.handle_input_bytes(keys).actions.is_empty());
++        state.endpoints[0].snapshot_generation = Some(2);
++        assert!(state.handle_input_bytes(b"\r").actions.is_empty());
++    }
++}
+diff --git a/src/client/shell/tests/close_tab.rs b/src/client/shell/tests/close_tab.rs
+index d5e897a..eb2ed1b 100644
+--- a/src/client/shell/tests/close_tab.rs
++++ b/src/client/shell/tests/close_tab.rs
+@@ -113,8 +113,8 @@ fn last_tab_close_confirmation_can_be_cancelled() {
+ }
+ 
+ #[test]
+-fn tab_close_stays_immediate_with_confirmation_disabled_or_other_tabs() {
+-    for (confirm, tabs) in [(false, 1), (false, 2), (true, 2)] {
++fn tab_close_stays_immediate_with_confirmation_disabled() {
++    for (confirm, tabs) in [(false, 1), (false, 2)] {
+         for menu in [false, true] {
+             let mut state = close_state(confirm, tabs);
+             assert_tab_close(&request_close(&mut state, menu));
+@@ -216,6 +216,8 @@ fn last_tab_close_preserves_parent_group_and_linked_workspace_scope() {
+             ));
+             assert_tab_close(&state.handle_input_bytes(b"\r"));
+         } else {
++            assert_no_close(&close);
++            let close = state.handle_input_bytes(b"\r");
+             assert_tab_close(&close);
+             assert!(state.overlay.is_none());
+             let [ClientShellAction::Endpoint { request, .. }] = close.actions.as_slice() else {
+diff --git a/src/client/shell/tests/graphics.rs b/src/client/shell/tests/graphics.rs
+index e54301a..fa8691f 100644
+--- a/src/client/shell/tests/graphics.rs
++++ b/src/client/shell/tests/graphics.rs
+@@ -259,6 +259,7 @@ fn every_dialog_and_menu_occludes_its_panel_not_the_whole_screen() {
+         ClientShellOverlay::ConfirmClose(ClientConfirmCloseOverlay {
+             workspace_id: "ws_1".into(),
+             tab_target: None,
++            terminal_method: None,
+             title: "close".into(),
+             detail: "confirm".into(),
+         }),
+diff --git a/src/client/shell/tests/mod.rs b/src/client/shell/tests/mod.rs
+index 9d96014..b4ddc39 100644
+--- a/src/client/shell/tests/mod.rs
++++ b/src/client/shell/tests/mod.rs
+@@ -247,6 +247,7 @@ fn surface_with_popup() -> PaneSurfaceFrame {
+ 
+ mod agents_worktrees_notifications;
+ mod chrome_context;
++mod close_confirmation;
+ mod close_tab;
+ mod copy;
+ mod endpoint_requests;
+diff --git a/src/config/model.rs b/src/config/model.rs
+index 0e2e57c..17cdff7 100644
+--- a/src/config/model.rs
++++ b/src/config/model.rs
+@@ -960,7 +960,7 @@ pub struct UiConfig {
+     pub redraw_on_focus_gained: bool,
+     /// Lines to scroll per mouse wheel notch. Default: 3.
+     pub mouse_scroll_lines: Option<NonZeroUsize>,
+-    /// Ask for confirmation before closing a workspace. Default: true.
++    /// Ask for confirmation before closing a pane, tab, or workspace. Default: true.
+     pub confirm_close: bool,
+     /// Ask for a tab name before creating a new tab. Default: true.
+     pub prompt_new_tab_name: bool,
+diff --git a/src/main.rs b/src/main.rs
+index 45a6409..ba7b411 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -276,7 +276,7 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
+ # Pane scrollback lines to scroll per mouse wheel notch.
+ # mouse_scroll_lines = 3
+ 
+-# Ask for confirmation before closing a workspace
++# Ask for confirmation before closing a pane, tab, or workspace
+ # confirm_close = true
+ 
+ # Ask for a tab name before creating a new tab.
+diff --git a/src/update.rs b/src/update.rs
+index 854bacd..8875a99 100644
+--- a/src/update.rs
++++ b/src/update.rs
+@@ -1,6 +1,6 @@
+ //! Self-update mechanism.
+ //!
+-//! Checks the hosted herdr.dev update manifest for newer versions.
++//! Checks the hosted update manifest for newer versions.
+ //! Manual `herdr update` downloads and installs the binary.
+ //! Background checks only surface availability and release notes.
+ //! Uses `curl` as a subprocess for HTTP — no additional Rust HTTP dependencies.
+@@ -22,7 +22,11 @@ use std::time::{Duration, Instant};
+ use interprocess::local_socket::traits::Stream as _;
+ use serde::{Deserialize, Deserializer};
+ 
+-const STABLE_UPDATE_MANIFEST_URL: &str = "https://herdr.dev/latest.json";
++const FORK_UPDATE_MANIFEST_URL: Option<&str> = option_env!("HERDR_FORK_UPDATE_MANIFEST_URL");
++const STABLE_UPDATE_MANIFEST_URL: &str = match FORK_UPDATE_MANIFEST_URL {
++    Some(url) => url,
++    None => "https://herdr.dev/latest.json",
++};
+ const PREVIEW_UPDATE_MANIFEST_URL: &str = "https://herdr.dev/preview.json";
+ const HOMEBREW_FORMULA_API_URL: &str = "https://formulae.brew.sh/api/formula/herdr.json";
+ const HERDR_UPDATE_COMMAND: &str = "herdr update";
+@@ -330,6 +334,11 @@ fn fetch_update_manifest() -> Result<UpdateManifest, String> {
+ }
+ 
+ fn fetch_preview_manifest() -> Result<PreviewManifest, String> {
++    if FORK_UPDATE_MANIFEST_URL.is_some() {
++        return Err(
++            "This fork publishes stable builds only; set update.channel = \"stable\".".into(),
++        );
++    }
+     fetch_json_manifest(PREVIEW_UPDATE_MANIFEST_URL)
+ }
+ 
+@@ -2500,6 +2509,22 @@ fn platform_target() -> (&'static str, &'static str) {
+ // Tests
+ // ---------------------------------------------------------------------------
+ 
++#[cfg(test)]
++mod fork_update_tests {
++    #[test]
++    fn fork_builds_keep_updates_in_the_verified_fork() {
++        if let Some(url) = option_env!("HERDR_FORK_UPDATE_MANIFEST_URL") {
++            assert_eq!(super::STABLE_UPDATE_MANIFEST_URL, url);
++            assert!(super::fetch_preview_manifest().is_err());
++        } else {
++            assert_eq!(
++                super::STABLE_UPDATE_MANIFEST_URL,
++                "https://herdr.dev/latest.json"
++            );
++        }
++    }
++}
++
+ #[cfg(all(test, unix))]
+ mod tests {
+     use super::*;

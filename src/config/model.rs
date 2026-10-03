@@ -960,7 +960,7 @@ pub struct UiConfig {
     pub redraw_on_focus_gained: bool,
     /// Lines to scroll per mouse wheel notch. Default: 3.
     pub mouse_scroll_lines: Option<NonZeroUsize>,
-    /// Ask for confirmation before closing a workspace. Default: true.
+    /// Ask for confirmation before closing a pane, tab, or workspace. Default: true.
     pub confirm_close: bool,
     /// Ask for a tab name before creating a new tab. Default: true.
     pub prompt_new_tab_name: bool,

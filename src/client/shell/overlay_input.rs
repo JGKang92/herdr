@@ -879,10 +879,15 @@ impl ClientShellState {
             if key.code == KeyCode::Enter {
                 self.accept_close_confirmation(outcome);
             } else if key.code == KeyCode::Esc {
+                let terminal_close = matches!(self.overlay.as_ref(),
+                    Some(ClientShellOverlay::ConfirmClose(confirm))
+                        if confirm.terminal_method.is_some());
                 self.overlay = None;
-                self.mode = ClientShellMode::Navigate;
-                self.navigate_workspace_id = self.focused_navigation_target();
-                self.reveal_navigation_workspace = true;
+                if !terminal_close {
+                    self.mode = ClientShellMode::Navigate;
+                    self.navigate_workspace_id = self.focused_navigation_target();
+                    self.reveal_navigation_workspace = true;
+                }
                 outcome.repaint = true;
             }
             return;
@@ -1014,6 +1019,35 @@ impl ClientShellState {
             return;
         };
         outcome.repaint = true;
+        if let Some(target) = confirm.terminal_method {
+            let (workspace, method) = *target;
+            let target_valid = self
+                .snapshot
+                .as_deref()
+                .is_some_and(|snapshot| match &method {
+                    crate::api::schema::Method::PaneClose(target) => {
+                        snapshot.panes.iter().any(|pane| {
+                            pane.pane_id == target.pane_id
+                                && pane.workspace_id == confirm.workspace_id
+                        })
+                    }
+                    crate::api::schema::Method::TabClose(target) => {
+                        snapshot.tabs.iter().any(|tab| {
+                            tab.tab_id == target.tab_id && tab.workspace_id == confirm.workspace_id
+                        })
+                    }
+                    _ => false,
+                });
+            if workspace.endpoint_id != self.active_endpoint_id
+                || !self.navigation_target_valid(&workspace)
+                || !target_valid
+            {
+                self.receive_endpoint_unavailable("Close target changed; try closing again".into());
+                return;
+            }
+            self.push_endpoint_method_with_kind(method, PendingEndpointKind::Generic, outcome);
+            return;
+        }
         let method = if let Some(target) = confirm.tab_target {
             if target.workspace.endpoint_id != self.active_endpoint_id
                 || !self.navigation_target_valid(&target.workspace)
@@ -1038,7 +1072,68 @@ impl ClientShellState {
                 close_group: true,
             })
         };
-        self.push_endpoint_method(method, outcome);
+        self.push_endpoint_method_with_kind(method, PendingEndpointKind::Generic, outcome);
+    }
+
+    pub(super) fn open_confirm_terminal_close_overlay(
+        &mut self,
+        method: &crate::api::schema::Method,
+    ) -> bool {
+        let Some(snapshot) = self.snapshot.as_deref() else {
+            return false;
+        };
+        let (workspace_id, title, detail) = match method {
+            crate::api::schema::Method::PaneClose(target) => {
+                let Some(pane) = snapshot
+                    .panes
+                    .iter()
+                    .find(|pane| pane.pane_id == target.pane_id)
+                else {
+                    return false;
+                };
+                let label = pane.label.as_deref().unwrap_or(&pane.pane_id);
+                (
+                    pane.workspace_id.clone(),
+                    "Close pane?",
+                    format!("Running processes will stop: {label}"),
+                )
+            }
+            crate::api::schema::Method::TabClose(target) => {
+                let Some(tab) = snapshot.tabs.iter().find(|tab| tab.tab_id == target.tab_id) else {
+                    return false;
+                };
+                let count = snapshot
+                    .panes
+                    .iter()
+                    .filter(|pane| pane.tab_id == tab.tab_id)
+                    .count();
+                let panes = if count == 1 {
+                    "1 pane".to_owned()
+                } else {
+                    format!("{count} panes")
+                };
+                (
+                    tab.workspace_id.clone(),
+                    "Close tab?",
+                    format!("Running processes in {panes} will stop: {}", tab.label),
+                )
+            }
+            _ => return false,
+        };
+        let Some(workspace) = self.navigation_target(&self.active_endpoint_id, &workspace_id)
+        else {
+            return false;
+        };
+        self.overlay = Some(ClientShellOverlay::ConfirmClose(
+            ClientConfirmCloseOverlay {
+                workspace_id,
+                tab_target: None,
+                terminal_method: Some(Box::new((workspace, method.clone()))),
+                title: title.into(),
+                detail,
+            },
+        ));
+        true
     }
 
     pub(super) fn open_confirm_close_overlay(&mut self, workspace_id: String) {
@@ -1113,6 +1208,7 @@ impl ClientShellState {
             ClientConfirmCloseOverlay {
                 workspace_id,
                 tab_target,
+                terminal_method: None,
                 title: if closes_group {
                     "Close worktree group?".to_owned()
                 } else {

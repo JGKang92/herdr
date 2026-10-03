@@ -1,6 +1,6 @@
 //! Self-update mechanism.
 //!
-//! Checks the hosted herdr.dev update manifest for newer versions.
+//! Checks the hosted update manifest for newer versions.
 //! Manual `herdr update` downloads and installs the binary.
 //! Background checks only surface availability and release notes.
 //! Uses `curl` as a subprocess for HTTP — no additional Rust HTTP dependencies.
@@ -22,7 +22,11 @@ use std::time::{Duration, Instant};
 use interprocess::local_socket::traits::Stream as _;
 use serde::{Deserialize, Deserializer};
 
-const STABLE_UPDATE_MANIFEST_URL: &str = "https://herdr.dev/latest.json";
+const FORK_UPDATE_MANIFEST_URL: Option<&str> = option_env!("HERDR_FORK_UPDATE_MANIFEST_URL");
+const STABLE_UPDATE_MANIFEST_URL: &str = match FORK_UPDATE_MANIFEST_URL {
+    Some(url) => url,
+    None => "https://herdr.dev/latest.json",
+};
 const PREVIEW_UPDATE_MANIFEST_URL: &str = "https://herdr.dev/preview.json";
 const HOMEBREW_FORMULA_API_URL: &str = "https://formulae.brew.sh/api/formula/herdr.json";
 const HERDR_UPDATE_COMMAND: &str = "herdr update";
@@ -330,6 +334,11 @@ fn fetch_update_manifest() -> Result<UpdateManifest, String> {
 }
 
 fn fetch_preview_manifest() -> Result<PreviewManifest, String> {
+    if FORK_UPDATE_MANIFEST_URL.is_some() {
+        return Err(
+            "This fork publishes stable builds only; set update.channel = \"stable\".".into(),
+        );
+    }
     fetch_json_manifest(PREVIEW_UPDATE_MANIFEST_URL)
 }
 
@@ -2499,6 +2508,22 @@ fn platform_target() -> (&'static str, &'static str) {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod fork_update_tests {
+    #[test]
+    fn fork_builds_keep_updates_in_the_verified_fork() {
+        if let Some(url) = option_env!("HERDR_FORK_UPDATE_MANIFEST_URL") {
+            assert_eq!(super::STABLE_UPDATE_MANIFEST_URL, url);
+            assert!(super::fetch_preview_manifest().is_err());
+        } else {
+            assert_eq!(
+                super::STABLE_UPDATE_MANIFEST_URL,
+                "https://herdr.dev/latest.json"
+            );
+        }
+    }
+}
 
 #[cfg(all(test, unix))]
 mod tests {

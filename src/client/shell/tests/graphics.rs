@@ -259,6 +259,7 @@ fn every_dialog_and_menu_occludes_its_panel_not_the_whole_screen() {
         ClientShellOverlay::ConfirmClose(ClientConfirmCloseOverlay {
             workspace_id: "ws_1".into(),
             tab_target: None,
+            terminal_method: None,
             title: "close".into(),
             detail: "confirm".into(),
         }),
