@@ -125,16 +125,22 @@ jobs:
         with:
           workspaces: source
           key: fork-${{ matrix.target }}
+          cache-on-failure: true
       - name: Lint and test
+        if: runner.os == 'Linux'
         env:
           CARGO_BUILD_TARGET: ${{ matrix.test_target }}
         run: just ci
+      - name: Lint and test Windows with the upstream native recipe
+        if: runner.os == 'Windows'
+        run: just check
       - name: Test close confirmation and updater on the musl release target
         if: runner.os == 'Linux'
         run: |
           just test-one 'client::shell::tests'
           just test-one 'update::'
       - name: Check documentation contracts
+        if: runner.os == 'Linux'
         run: just docs-contract-test
       - name: Build optimized binary
         run: just build
