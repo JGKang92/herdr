@@ -52,8 +52,8 @@ endpoint-generation change may require a server replacement. Do not update or
 stop a server while important work is running if that replacement is requested.
 
 Fork releases use upstream's semantic version. A patch-only rebuild of the same
-upstream version requires `herdr update --force`; normal update detection advances
-when the upstream stable version increases.
+upstream version requires reinstalling its release package; normal update detection
+advances when the upstream stable version increases.
 
 ## Refresh the patch
 

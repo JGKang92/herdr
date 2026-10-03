@@ -146,7 +146,12 @@ jobs:
         shell: bash
         env:
           TARGET: ${{ matrix.target }}
-        run: scripts/release_perf_smoke.sh "target/$TARGET/release/herdr"
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          baseline="$RUNNER_TEMP/herdr-upstream-baseline"
+          curl -fL --retry 3 "https://github.com/herdrdev/herdr/releases/download/v$VERSION/herdr-linux-x86_64" -o "$baseline"
+          chmod 755 "$baseline"
+          HERDR_PERF_BASELINE_BIN="$baseline" scripts/release_perf_smoke.sh "target/$TARGET/release/herdr"
       - name: Package Linux files and validation report
         if: runner.os == 'Linux'
         shell: bash
